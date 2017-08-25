@@ -1,4 +1,5 @@
 apply from: 'gradle/shibboleth.gradle'
+apply from: 'redis/redis.gradle'
 
 repositories {
     jcenter()

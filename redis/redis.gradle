@@ -1,0 +1,56 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath "com.bmuschko:gradle-docker-plugin:3.1.0"
+    }
+}
+
+apply plugin: com.bmuschko.gradle.docker.DockerRemoteApiPlugin
+
+import com.bmuschko.gradle.docker.tasks.image.*
+import com.bmuschko.gradle.docker.tasks.container.*
+
+task deleteRedisDockerfile(type: Delete) {
+    group = 'redisdocker'
+    delete 'build/mydockerfile/'
+}
+
+task createRedisDockerfile(type: Dockerfile) {
+    dependsOn deleteRedisDockerfile
+    group = 'redisdocker'
+    destFile = project.file('build/mydockerfile/Dockerfile')
+    from 'redis:alpine'
+    maintainer 'Unicon, Inc.'
+}
+
+task buildRedisImage(type: DockerBuildImage) {
+    dependsOn createRedisDockerfile
+    group = 'redisdocker'
+    inputDir = createRedisDockerfile.destFile.parentFile
+    tag = 'unicon/redisimage'
+}
+
+task createRedisContainer(type: DockerCreateContainer) {
+    dependsOn buildRedisImage
+    group = 'redisdocker'
+    targetImageId { buildRedisImage.getImageId() }
+    containerName = "big_redis_machine"
+    portBindings = ['6379:6379']
+}
+
+//Call this task when you want a Docker instance of Redis up and running
+task startRedisContainer(type: DockerStartContainer) {
+    dependsOn createRedisContainer
+    group = 'redisdocker'
+    targetContainerId { createRedisContainer.getContainerId() }
+}
+
+//Call this task when you want to stop a Docker instance of Redis
+task removeRedisContainer(type: DockerRemoveContainer) {
+    group = 'redisdocker'
+    removeVolumes = true
+    force = true
+    targetContainerId { "big_redis_machine" }
+}
